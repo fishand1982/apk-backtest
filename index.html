@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>АПК · честный бэктест индикатора</title>
+<style>
+  :root{
+    --ink:#1f2a37; --muted:#6b7280; --slate:#94a3b8; --line:#e7e5e4;
+    --bg:#f5f5f4; --card:#ffffff; --green:#2f7d4f; --clay:#b0563f;
+    --amber-bg:#fffbeb; --amber-bd:#fde68a; --amber-tx:#92660a;
+    --ok-bg:#ecfdf5; --ok-bd:#a7f3d0; --ok-tx:#065f46;
+    --bad-bg:#fef2f2; --bad-bd:#fecaca; --bad-tx:#991b1b;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;font-size:14px;line-height:1.5}
+  .wrap{max-width:1000px;margin:0 auto;padding:20px}
+  h1{font-family:Georgia,"Times New Roman",serif;font-size:20px;margin:0;font-weight:600;letter-spacing:-.01em}
+  .sub{color:var(--muted);margin-top:4px;font-size:13px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px}
+  .mt{margin-top:16px}
+  .banner{display:flex;gap:8px;align-items:flex-start;border-radius:8px;padding:12px;font-size:12px}
+  .banner.warn{background:var(--amber-bg);border:1px solid var(--amber-bd);color:var(--amber-tx)}
+  .banner.ok{background:var(--ok-bg);border:1px solid var(--ok-bd);color:var(--ok-tx)}
+  .banner.bad{background:var(--bad-bg);border:1px solid var(--bad-bd);color:var(--bad-tx)}
+  .tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+  .tab{cursor:pointer;border:none;border-radius:7px;padding:7px 12px;font-size:12px;font-weight:600;
+    background:#f1f0ee;color:#57534e;transition:.15s}
+  .tab:hover{background:#e7e5e4}
+  .tab.active{background:#292524;color:#fff}
+  .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  label.ctl{font-size:12px;color:#57534e;display:block}
+  label.ctl b{color:var(--ink)}
+  input[type=range]{width:100%;margin-top:6px;accent-color:#292524}
+  .panel h3{font-size:13px;margin:0 0 10px;font-weight:600;color:#292524}
+  .cap{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--slate);margin:0 0 4px}
+  .verdict{border-radius:8px;border:1px solid;padding:12px;font-size:13px}
+  .verdict.ok{background:var(--ok-bg);border-color:var(--ok-bd);color:var(--ok-tx)}
+  .verdict.neutral{background:#fafaf9;border-color:var(--line);color:#44403c}
+  .vhead{display:flex;align-items:center;gap:8px;font-weight:600}
+  .wm{margin-left:auto;background:#292524;color:#fff;font-size:9px;font-weight:700;text-transform:uppercase;
+    letter-spacing:.05em;padding:2px 7px;border-radius:4px}
+  .kv{display:grid;grid-template-columns:1fr auto;gap:2px 18px;margin-top:8px;font:12px ui-monospace,Menlo,Consolas,monospace}
+  .btn{cursor:pointer;border:none;border-radius:7px;padding:7px 12px;font-size:12px;font-weight:600;background:#292524;color:#fff}
+  .btn:hover{background:#44403c}
+  .link{background:none;border:none;color:#57534e;text-decoration:underline;cursor:pointer;font-size:12px}
+  .drop{margin-top:16px;border:1px dashed #d6d3d1;background:#fafaf9;border-radius:8px;padding:14px}
+  .hint{font-size:11px;color:var(--muted);line-height:1.6;margin-top:8px}
+  .foot{text-align:center;color:var(--slate);font-size:11px;margin-top:20px}
+  .err{color:#b91c1c;font-size:12px;margin-top:8px}
+  .empty{border:1px dashed #d6d3d1;background:#fff;border-radius:10px;padding:40px;text-align:center;color:var(--muted);font-size:13px}
+  svg{display:block;width:100%;height:auto}
+  @media(max-width:760px){.grid4{grid-template-columns:1fr 1fr}.grid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🌱 АПК · честный бэктест индикатора «спрос / производительность»</h1>
+    <p class="sub">Инструмент сначала доказывает собственную честность — молчит там, где сигнала нет, — и только потом ему стоит доверять. Все вычисления идут в вашем браузере; данные никуда не отправляются.</p>
+  </header>
+
+  <div class="banner warn mt">
+    ⚠️ <span>Синтетические данные проверяют <b>сам тест</b>, а не реальную экономику и не «работоспособность системы».
+    Вывод об АПК Кыргызстана даёт только режим <b>реальных данных</b> (ряды Нацстаткома/НБКР).</span>
+  </div>
+
+  <div class="card mt">
+    <div class="tabs" id="tabs"></div>
+    <div class="grid4">
+      <label class="ctl">Длина ряда: <b id="lT">180</b> мес.
+        <input type="range" id="T" min="96" max="300" step="12" value="180"></label>
+      <label class="ctl">Старт обучения: <b id="ltr">60</b> точек
+        <input type="range" id="tr" min="24" max="120" step="6" value="60"></label>
+      <label class="ctl">Порог улучшения: <b id="lim">5</b>%
+        <input type="range" id="im" min="0" max="20" step="1" value="5"></label>
+      <label class="ctl">Значимость p &lt; <b id="lp">0.05</b>
+        <input type="range" id="pp" min="0.01" max="0.1" step="0.01" value="0.05"></label>
+    </div>
+    <div id="drop" class="drop" style="display:none">
+      <button class="btn" id="uploadBtn">⬆ Загрузить CSV</button>
+      <input type="file" id="file" accept=".csv" style="display:none">
+      <button class="link" id="tplBtn">Скачать шаблон</button>
+      <span id="fname" style="font-size:12px;color:var(--muted);margin-left:8px"></span>
+      <p class="hint">Колонки: <code>date, price, demand, productivity, money, wage, input_cost</code>.
+        Для АПК: <b>price</b> — индекс цен сектора (PPI); <b>demand</b> — независимая мера платёжеспособного спроса
+        (выручка/потребление, <i>не выводить из цены</i>); <b>productivity</b> — реальный выпуск на занятого;
+        остальное — контрольные переменные. Месячная частота, 8+ лет. Разделитель — запятая или точка с запятой.</p>
+      <div id="ferr" class="err" style="display:none"></div>
+    </div>
+  </div>
+
+  <div id="results" class="mt"></div>
+
+  <p class="foot">walk-forward вне выборки · OLS · тест Дибольда–Мариано · вычисления в браузере</p>
+</div>
+
+<script>
+/* ----------------------------- numeric core ----------------------------- */
+const MODELS={"Случайное блуждание":null,"AR(2)":["dP_l1","dP_l2"],
+ "Стандартные факторы":["money_l1","wage_l1","input_l1"],
+ "Факторы + индикатор":["money_l1","wage_l1","input_l1","ind_dl1"]};
+const ORDER=Object.keys(MODELS), IND="Факторы + индикатор";
+const T2=A=>A[0].map((_,j)=>A.map(r=>r[j]));
+const mm=(A,B)=>{const Bt=T2(B);return A.map(r=>Bt.map(c=>r.reduce((s,v,k)=>s+v*c[k],0)))};
+const mv=(A,v)=>A.map(r=>r.reduce((s,x,k)=>s+x*v[k],0));
+function solve(A,b){const n=A.length,M=A.map((r,i)=>[...r,b[i]]);
+ for(let c=0;c<n;c++){let p=c;for(let r=c+1;r<n;r++)if(Math.abs(M[r][c])>Math.abs(M[p][c]))p=r;
+  [M[c],M[p]]=[M[p],M[c]];const pv=M[c][c]||1e-12;for(let j=c;j<=n;j++)M[c][j]/=pv;
+  for(let r=0;r<n;r++)if(r!==c){const f=M[r][c];for(let j=c;j<=n;j++)M[r][j]-=f*M[c][j];}}
+ return M.map(r=>r[n]);}
+function ols(X,y){const Xt=T2(X),XtX=mm(Xt,X);for(let i=0;i<XtX.length;i++)XtX[i][i]+=1e-8;return solve(XtX,mv(Xt,y));}
+function erf(x){const s=x<0?-1:1;x=Math.abs(x);const t=1/(1+0.3275911*x);
+ const y=1-((((1.061405429*t-1.453152027)*t+1.421413741)*t-0.284496736)*t+0.254829592)*t*Math.exp(-x*x);return s*y;}
+const ncdf=z=>0.5*(1+erf(z/Math.SQRT2));
+
+/* --------------------------- synthetic data ----------------------------- */
+function mul(seed){return function(){let t=seed+=0x6d2b79f5;t=Math.imul(t^(t>>>15),t|1);
+ t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296;};}
+function gauss(r){let u=0,v=0;while(!u)u=r();while(!v)v=r();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+function ar1(n,rho,sd,r,b){const x=[0];for(let t=1;t<n;t++)x[t]=rho*x[t-1]+sd*gauss(r);return x.map(v=>b+v);}
+const cum=a=>a.reduce((acc,v,i)=>{acc.push((acc[i-1]||0)+v);return acc;},[]);
+function synth(mode,T,seed=20260620){const r=mul(seed+(mode==="signal"?1:0));
+ const money=ar1(T,.5,.004,r,.004),wage=ar1(T,.5,.003,r,.003),inp=ar1(T,.4,.005,r,.002);
+ const dL=cum(ar1(T,.3,.010,r,.004)).map(v=>v+10),pL=cum(ar1(T,.3,.008,r,.003)).map(v=>v+9);
+ const ind=dL.map((v,i)=>v-pL[i]),ic=ind.map((v,i)=>i?v-ind[i-1]:0);
+ const g=mode==="signal"?.6:0,dp=[];
+ for(let t=0;t<T;t++)dp[t]=.0015+.5*money[t]+.3*wage[t]+.2*inp[t]+g*(t?ic[t-1]:0)+.010*gauss(r);
+ const prL=cum(dp).map(v=>v+4),rows=[];
+ for(let t=0;t<T;t++)rows.push({price:Math.exp(prL[t]),demand:Math.exp(dL[t]),
+  productivity:Math.exp(pL[t]),money:money[t],wage:wage[t],input_cost:inp[t]});
+ return rows;}
+
+/* ------------------------------ pipeline -------------------------------- */
+function feats(rows){const ln=Math.log;
+ const dp=rows.map((d,i)=>i?ln(d.price)-ln(rows[i-1].price):NaN);
+ const ind=rows.map(d=>ln(d.demand)-ln(d.productivity));
+ const ic=ind.map((v,i)=>i?v-ind[i-1]:NaN);const f=[];
+ for(let t=3;t<rows.length;t++)f.push({dlogP:dp[t],dP_l1:dp[t-1],dP_l2:dp[t-2],
+  money_l1:rows[t-1].money,wage_l1:rows[t-1].wage,input_l1:rows[t-1].input_cost,ind_dl1:ic[t-1]});
+ return f.filter(o=>Object.values(o).every(Number.isFinite));}
+function wf(f,trainMin){const y=f.map(o=>o.dlogP),n=f.length,P={};ORDER.forEach(m=>P[m]=[]);
+ const start=Math.min(Math.max(trainMin,10),n-5),idx=[];
+ for(let i=start;i<n;i++){idx.push(i);
+  for(const m of ORDER){const cols=MODELS[m];
+   if(!cols){P[m].push(0);continue;}
+   const Xtr=f.slice(0,i).map(o=>[1,...cols.map(c=>o[c])]),b=ols(Xtr,y.slice(0,i));
+   const xt=[1,...cols.map(c=>f[i][c])];P[m].push(xt.reduce((s,v,k)=>s+v*b[k],0));}}
+ return{actual:idx.map(i=>y[i]),preds:P};}
+function dm(actual,pb,pm){const d=actual.map((a,i)=>(a-pb[i])**2-(a-pm[i])**2),n=d.length;
+ const db=d.reduce((s,v)=>s+v,0)/n,vr=d.reduce((s,v)=>s+(v-db)**2,0)/n,se=Math.sqrt(vr/n);
+ const D=se>0?db/se:NaN;return{dm:D,p:Number.isFinite(D)?2*(1-ncdf(Math.abs(D))):NaN};}
+function evalRows(rows,pr){const f=feats(rows);
+ if(f.length<20)return{error:"Слишком мало точек после построения признаков (нужно ≥20)."};
+ const{actual,preds}=wf(f,pr.trainMin),rmse={},mae={};
+ for(const m of ORDER){const e=actual.map((a,i)=>a-preds[m][i]);
+  rmse[m]=Math.sqrt(e.reduce((s,v)=>s+v*v,0)/e.length);mae[m]=e.reduce((s,v)=>s+Math.abs(v),0)/e.length;}
+ const bn=ORDER.filter(m=>m!==IND),best=bn.reduce((a,b)=>rmse[b]<rmse[a]?b:a,bn[0]);
+ const imp=1-rmse[IND]/rmse[best],{dm:D,p}=dm(actual,preds[best],preds[IND]);
+ const passed=imp>=pr.improveThr&&Number.isFinite(p)&&p<pr.pThr&&D>0;
+ return{rmse,mae,best,improve:imp,dm:D,p,passed,actual,preds,n:actual.length};}
+
+/* ------------------------------ svg charts ------------------------------ */
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;");}
+function barSVG(res){const C={slate:"#94a3b8",green:"#2f7d4f",clay:"#b0563f"};
+ const data=ORDER.map(m=>({n:m,v:res.rmse[m]})),mx=Math.max(...data.map(d=>d.v))*1.15;
+ const W=480,H=240,pad=44,bw=(W-pad-10)/data.length*.62,gap=(W-pad-10)/data.length;
+ let s=`<svg viewBox="0 0 ${W} ${H}">`;
+ for(let i=0;i<=4;i++){const yy=20+(H-60)*i/4,val=(mx*(1-i/4));
+  s+=`<line x1="${pad}" y1="${yy}" x2="${W-6}" y2="${yy}" stroke="#e7e5e4" stroke-dasharray="2 4"/>`;
+  s+=`<text x="${pad-4}" y="${yy+3}" font-size="9" fill="#94a3b8" text-anchor="end">${val.toFixed(4)}</text>`;}
+ data.forEach((d,i)=>{const h=(H-60)*(d.v/mx),x=pad+6+i*gap,y=H-40-h;
+  const col=d.n===IND?(res.passed?C.green:C.clay):C.slate;
+  s+=`<rect x="${x}" y="${y}" width="${bw}" height="${h}" fill="${col}" rx="3"/>`;
+  s+=`<text x="${x+bw/2}" y="${H-26}" font-size="8.5" fill="#1f2a37" text-anchor="middle">${esc(d.n.length>14?d.n.slice(0,13)+"…":d.n)}</text>`;});
+ return s+"</svg>";}
+function lineSVG(res){const C={ink:"#1f2a37",clay:"#b0563f",green:"#2f7d4f"};
+ const A=res.actual,RW=res.preds["Случайное блуждание"],FI=res.preds[IND],n=A.length;
+ const all=[...A,...RW,...FI],mn=Math.min(...all,0),mx=Math.max(...all,0);
+ const W=480,H=240,pl=44,pr=8,pt=14,pb=24,rng=(mx-mn)||1;
+ const X=i=>pl+(W-pl-pr)*i/(n-1||1),Y=v=>pt+(H-pt-pb)*(1-(v-mn)/rng);
+ const poly=(arr,col,w)=>`<polyline fill="none" stroke="${col}" stroke-width="${w}" points="${arr.map((v,i)=>X(i)+","+Y(v)).join(" ")}"/>`;
+ let s=`<svg viewBox="0 0 ${W} ${H}">`;
+ for(let i=0;i<=4;i++){const yy=pt+(H-pt-pb)*i/4;s+=`<line x1="${pl}" y1="${yy}" x2="${W-pr}" y2="${yy}" stroke="#e7e5e4" stroke-dasharray="2 4"/>`;}
+ s+=`<line x1="${pl}" y1="${Y(0)}" x2="${W-pr}" y2="${Y(0)}" stroke="#94a3b8" stroke-width=".8"/>`;
+ s+=poly(RW,C.clay,1)+poly(FI,C.green,1.5)+poly(A,C.ink,1.7);
+ const lg=[["Факт",C.ink],["Случ. блуждание",C.clay],["Факторы+индикатор",C.green]];
+ lg.forEach((l,i)=>{const lx=pl+i*150;s+=`<line x1="${lx}" y1="8" x2="${lx+16}" y2="8" stroke="${l[1]}" stroke-width="2"/><text x="${lx+20}" y="11" font-size="9" fill="#57534e">${esc(l[0])}</text>`;});
+ return s+"</svg>";}
+
+/* ------------------------------ rendering ------------------------------- */
+const REQ=["price","demand","productivity","money","wage","input_cost"];
+const st={mode:"selftest",T:180,trainMin:60,improveThr:5,pThr:0.05,realRows:null,fname:"",ferr:""};
+const prm=()=>({trainMin:st.trainMin,improveThr:st.improveThr/100,pThr:st.pThr});
+
+const TABS=[["selftest","🛡 Самопроверка"],["synthSignal","🧪 Синтетика: сигнал"],
+ ["synthNull","🧪 Синтетика: пусто"],["real","⬆ Реальные данные"]];
+function drawTabs(){document.getElementById("tabs").innerHTML=TABS.map(t=>
+ `<button class="tab ${st.mode===t[0]?"active":""}" data-m="${t[0]}">${t[1]}</button>`).join("");
+ document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{st.mode=b.dataset.m;drawTabs();
+  document.getElementById("drop").style.display=st.mode==="real"?"block":"none";render();});}
+
+function verdictHTML(res,synthetic){
+ if(res.error)return `<div class="verdict neutral"><div class="vhead">ⓘ ${esc(res.error)}</div></div>`;
+ const ok=res.passed;
+ return `<div class="verdict ${ok?"ok":"neutral"}">
+   <div class="vhead">${ok?"🛡 Сигнал обнаружен":"ⓘ Сигнала нет / незначимо"}
+     ${synthetic?'<span class="wm">синтетика · не доказательство</span>':""}</div>
+   <div class="kv">
+     <span>Лучшая базовая модель:</span><span>${esc(res.best)}</span>
+     <span>Улучшение RMSE индикатором:</span><span>${(res.improve*100).toFixed(2)}%</span>
+     <span>Тест Дибольда–Мариано (p):</span><span>${res.p.toFixed(4)}</span>
+     <span>Точек вне выборки:</span><span>${res.n}</span>
+   </div></div>`;}
+function panelHTML(title,res,synthetic){
+ const charts=res.error?"":`<p class="cap">RMSE вне выборки</p>${barSVG(res)}
+   <p class="cap" style="margin-top:10px">Прогноз против факта</p>${lineSVG(res)}`;
+ return `<div class="card panel"><h3>${esc(title)}</h3>${charts}
+   <div class="mt">${verdictHTML(res,synthetic)}</div></div>`;}
+
+function render(){const R=document.getElementById("results");
+ if(st.mode==="selftest"){const a=evalRows(synth("null",st.T),prm()),b=evalRows(synth("signal",st.T),prm());
+  const honest=!a.error&&!b.error&&!a.passed&&b.passed;
+  R.innerHTML=`<div class="banner ${honest?"ok":"bad"}">${honest?"🛡":"⚠️"}
+     ${honest?"Самопроверка пройдена: тест молчит на пустом наборе и находит сигнал на сигнальном — инструменту можно доверять."
+       :"Самопроверка не пройдена при текущих порогах — измените параметры и посмотрите снова."}</div>
+    <div class="grid2 mt">${panelHTML("Набор без сигнала (ожидаем: ничего)",a,true)}
+      ${panelHTML("Набор с сигналом (ожидаем: находку)",b,true)}</div>`;}
+ else if(st.mode==="synthSignal"||st.mode==="synthNull"){
+  const m=st.mode==="synthSignal"?"signal":"null",res=evalRows(synth(m,st.T),prm());
+  R.innerHTML=panelHTML(m==="signal"?"Синтетика с заложенным сигналом":"Синтетика без сигнала",res,true);}
+ else{ if(st.realRows){R.innerHTML=panelHTML("Реальные данные АПК",evalRows(st.realRows,prm()),false);}
+  else{R.innerHTML=`<div class="empty">Загрузите CSV с реальными рядами АПК — и тест выдаст вердикт по данным, а не по предположениям.</div>`;}}}
+
+/* sliders */
+const bind=(id,lab,key,fmt)=>{const el=document.getElementById(id);
+ el.oninput=()=>{st[key]=+el.value;document.getElementById(lab).textContent=fmt?fmt(+el.value):el.value;render();};};
+bind("T","lT","T");bind("tr","ltr","trainMin");bind("im","lim","improveThr");bind("pp","lp","pThr");
+
+/* CSV */
+function parseCSV(text){const lines=text.replace(/\r/g,"").split("\n").filter(l=>l.trim());
+ const delim=(lines[0].split(";").length>lines[0].split(",").length)?";":",";
+ const head=lines[0].split(delim).map(s=>s.trim());
+ const rows=lines.slice(1).map(l=>{const c=l.split(delim);const o={};head.forEach((h,i)=>o[h]=c[i]);return o;});
+ return{head,rows};}
+document.getElementById("uploadBtn").onclick=()=>document.getElementById("file").click();
+document.getElementById("file").onchange=e=>{const f=e.target.files[0];if(!f)return;
+ st.fname=f.name;document.getElementById("fname").textContent=f.name;
+ const fr=new FileReader();fr.onload=()=>{
+  try{const{head,rows}=parseCSV(fr.result);
+   const miss=REQ.filter(c=>!head.includes(c));
+   const err=document.getElementById("ferr");
+   if(miss.length){st.realRows=null;err.style.display="block";err.textContent="Нет колонок: "+miss.join(", ");render();return;}
+   const data=rows.map(r=>{const o={};REQ.forEach(c=>o[c]=parseFloat(String(r[c]).replace(",","."))); return o;})
+     .filter(r=>REQ.every(c=>Number.isFinite(r[c])&&(["price","demand","productivity"].includes(c)?r[c]>0:true)));
+   if(data.length<40){st.realRows=null;err.style.display="block";err.textContent="Слишком мало валидных строк: "+data.length+" (нужно ≥40).";render();return;}
+   err.style.display="none";st.realRows=data;render();
+  }catch(ex){const err=document.getElementById("ferr");err.style.display="block";err.textContent="Не удалось разобрать файл.";}
+ };fr.readAsText(f);};
+document.getElementById("tplBtn").onclick=()=>{
+ const csv="date,"+REQ.join(",")+"\n2016-01,100,1000,50,0.004,0.003,0.002\n";
+ const b=new Blob([csv],{type:"text/csv"}),u=URL.createObjectURL(b),a=document.createElement("a");
+ a.href=u;a.download="apk_template.csv";a.click();URL.revokeObjectURL(u);};
+
+drawTabs();render();
+</script>
+</body>
+</html>
